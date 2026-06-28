@@ -97,4 +97,60 @@ export const authController = new Elysia({ prefix: "/auth" })
       email: t.String({ format: "email" }),
       password: t.String(),
     })
+  })
+
+  // GOOGLE Route
+  .post("/google", async ({ body, jwt, error }) => {
+    const { credential } = body;
+
+    try {
+      const tokenInfoUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`;
+      const response = await fetch(tokenInfoUrl);
+
+      if (!response.ok) {
+        return error(400, { message: "Invalid Google credential token" });
+      }
+
+      const payload: any = await response.json();
+      const email = payload.email;
+
+      if (!email) {
+        return error(400, { message: "Google account does not have an email address" });
+      }
+
+      let user = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (!user) {
+        const randomPass = await Bun.password.hash(Math.random().toString(36) + "google-auth");
+        user = await prisma.user.create({
+          data: {
+            email,
+            password: randomPass,
+          },
+        });
+      }
+
+      const token = await jwt.sign({
+        sub: String(user.id),
+        email: user.email,
+      });
+
+      return {
+        success: true,
+        message: "Google authentication successful",
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+        },
+      };
+    } catch (err: any) {
+      return error(500, { message: err.message || "Failed to authenticate with Google" });
+    }
+  }, {
+    body: t.Object({
+      credential: t.String(),
+    })
   });
