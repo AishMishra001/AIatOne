@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { todoController } from "./controllers/todo.controller";
 import { authController } from "./controllers/auth.controller";
+import { jobsController } from "./controllers/jobs.controller";
 
 const app = new Elysia()
   // Enable CORS for client-side API requests
@@ -15,6 +16,7 @@ const app = new Elysia()
     app
       .use(todoController)
       .use(authController)
+      .use(jobsController)
   )
   
   // Start server listening on port 3000
@@ -23,3 +25,4 @@ const app = new Elysia()
 console.log(
   `🚀 Elysia server is running at http://${app.server?.hostname}:${app.server?.port}`
 );
+console.log("Registered routes:", app.routes.map(r => `${r.method} ${r.path}`));

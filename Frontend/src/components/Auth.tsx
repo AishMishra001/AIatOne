@@ -22,7 +22,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onClose }) => {
       if (g && g.accounts) {
         setGoogleAvailable(true);
         g.accounts.id.initialize({
-          client_id: "1055787680786-8i5p9e65s08906rsk0rki7k91f09m2i4.apps.googleusercontent.com", // Placeholder OAuth Client ID
+          client_id: (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || "",
           callback: handleGoogleCredentialResponse,
           auto_select: false,
         });

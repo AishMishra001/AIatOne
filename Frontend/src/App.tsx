@@ -14,7 +14,12 @@ import {
   Zap, 
   Briefcase,
   TrendingUp,
-  Cpu
+  Cpu,
+  Search,
+  RefreshCw,
+  Globe,
+  DollarSign,
+  X
 } from "lucide-react";
 
 // Types
@@ -183,8 +188,59 @@ export default function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Articles State
-  const [activeArticleTab, setActiveArticleTab] = useState<"announcements" | "jobs" | "trends" | "tools">("announcements");
+  const [activeArticleTab, setActiveArticleTab] = useState<"announcements" | "trends" | "tools">("announcements");
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+
+  // Page Routing State
+  const [currentPage, setCurrentPage] = useState<"home" | "jobs">("home");
+
+  // Remotive Jobs State
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
+  const [jobsError, setJobsError] = useState<string | null>(null);
+  const [jobsSearch, setJobsSearch] = useState("");
+  const [jobsCategory, setJobsCategory] = useState(""); // "" represents all
+  const [aiOnly, setAiOnly] = useState(true); // default to true to focus on AI/ML roles
+  const [selectedJob, setSelectedJob] = useState<any | null>(null);
+
+  const fetchJobs = async () => {
+    setLoadingJobs(true);
+    setJobsError(null);
+    try {
+      const queryParams = new URLSearchParams();
+      if (jobsCategory) queryParams.append("category", jobsCategory);
+      if (aiOnly) queryParams.append("aiOnly", "true");
+      if (jobsSearch) queryParams.append("search", jobsSearch);
+
+      const res = await fetch(`http://localhost:3000/api/jobs?${queryParams.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch remote jobs");
+      const data = await res.json();
+      if (data.success) {
+        setJobs(data.jobs || []);
+      } else {
+        throw new Error(data.message || "Failed to parse remote jobs");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setJobsError(err.message || "Unable to load jobs. Make sure the Elysia backend is running.");
+    } finally {
+      setLoadingJobs(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentPage === "jobs" && token) {
+      fetchJobs();
+    }
+  }, [currentPage, jobsCategory, aiOnly, token]);
+
+  const handleNavigateToJobs = () => {
+    if (!token) {
+      setShowAuthModal(true);
+    } else {
+      setCurrentPage("jobs");
+    }
+  };
 
   // Chatbots State
   const [activeChatbot, setActiveChatbot] = useState<"announcements" | "jobs" | "trends" | "tools">("announcements");
@@ -258,6 +314,7 @@ export default function App() {
     setToken(newToken);
     setUserEmail(email);
     setShowAuthModal(false);
+    setCurrentPage("jobs"); // Redirect to remote jobs upon signin
   };
 
   const handleLogout = () => {
@@ -265,6 +322,7 @@ export default function App() {
     localStorage.removeItem("userEmail");
     setToken(null);
     setUserEmail(null);
+    setCurrentPage("home"); // Return to home page
   };
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -326,10 +384,22 @@ export default function App() {
 
           {/* Nav links */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-textGray">
-            <a href="#articles" className="hover:text-lightAccent transition-colors">Daily Articles</a>
-            <a href="#chatbots" className="hover:text-lightAccent transition-colors">Specialized Chatbots</a>
-            <a href="#live-feed" className="hover:text-lightAccent transition-colors">Live Feed</a>
-            <a href="#tech-stack" className="hover:text-lightAccent transition-colors">Architecture Stack</a>
+            <button 
+              onClick={() => setCurrentPage("home")}
+              className={`hover:text-lightAccent transition-colors ${currentPage === "home" ? "text-lightAccent font-extrabold" : ""}`}
+            >
+              Home
+            </button>
+            <button 
+              onClick={handleNavigateToJobs}
+              className={`hover:text-lightAccent transition-colors flex items-center gap-1.5 ${currentPage === "jobs" ? "text-lightAccent font-extrabold" : ""}`}
+            >
+              <span>Remote Jobs</span>
+              {!token && <Lock size={12} className="text-yellow-500/80 animate-pulse" />}
+            </button>
+            <a href="#articles" onClick={() => setCurrentPage("home")} className="hover:text-lightAccent transition-colors">Daily Articles</a>
+            <a href="#chatbots" onClick={() => setCurrentPage("home")} className="hover:text-lightAccent transition-colors">Specialized Chatbots</a>
+            <a href="#live-feed" onClick={() => setCurrentPage("home")} className="hover:text-lightAccent transition-colors">Live Feed</a>
           </nav>
 
           {/* Right Action buttons */}
@@ -360,329 +430,585 @@ export default function App() {
         </div>
       </header>
 
-      {/* 2. Hero Section */}
-      <section className="relative min-h-[70vh] flex flex-col items-center justify-center text-center px-6 py-20 overflow-hidden border-b border-borderGray">
-        {/* Subtle grid background */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#212121_1px,transparent_1px),linear-gradient(to_bottom,#212121_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-30 pointer-events-none"></div>
-        
-        {/* Glow point */}
-        <div className="absolute top-0 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl -z-10 pointer-events-none"></div>
-
-        <div className="max-w-4xl mx-auto space-y-8 relative z-10">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-1.5 bg-[#121212] border border-borderGray px-3 py-1.5 rounded-full text-xs font-bold text-gray-400 tracking-wider uppercase">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            ALL OF AI. AT ONE PLACE.
-          </div>
-
-          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.05] text-lightAccent">
-            All AI Announcements, <br/>
-            <span className="text-gray-500">Trends & Jobs. In One Place.</span>
-          </h1>
-
-          <p className="text-lg md:text-xl text-textGray max-w-2xl mx-auto font-medium leading-relaxed">
-            Stay ahead of the curve with daily AI-generated briefings, interactive specialized chatbot agents, and real-time live-streams of industry events.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            {token ? (
-              <a 
-                href="#chatbots" 
-                className="w-full sm:w-auto bg-lightAccent text-darkBg hover:bg-white active:scale-95 font-extrabold text-base px-8 py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-200"
-              >
-                <span>Enter Dashboard Workspace</span>
-                <ArrowUpRight size={18} />
-              </a>
-            ) : (
-              <button 
-                onClick={() => setShowAuthModal(true)}
-                className="w-full sm:w-auto bg-lightAccent text-darkBg hover:bg-white active:scale-95 font-extrabold text-base px-8 py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-[0_0_30px_rgba(254,255,245,0.15)]"
-              >
-                <span>Get Started with Google</span>
-                <ArrowUpRight size={18} />
-              </button>
-            )}
+      {currentPage === "home" ? (
+        <>
+          {/* 2. Hero Section */}
+          <section className="relative min-h-[70vh] flex flex-col items-center justify-center text-center px-6 py-20 overflow-hidden border-b border-borderGray">
+            {/* Subtle grid background */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#212121_1px,transparent_1px),linear-gradient(to_bottom,#212121_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-30 pointer-events-none"></div>
             
-            <a 
-              href="#articles" 
-              className="w-full sm:w-auto border border-borderGray hover:border-lightAccent bg-darkCard/50 hover:bg-darkCard active:scale-95 font-extrabold text-base px-8 py-4 rounded-xl transition-all duration-200"
-            >
-              Explore Features
-            </a>
-          </div>
+            {/* Glow point */}
+            <div className="absolute top-0 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl -z-10 pointer-events-none"></div>
 
-          {/* Social Proof/Tech stack badges */}
-          <div className="pt-12 flex flex-wrap justify-center items-center gap-x-8 gap-y-4 text-xs font-semibold text-gray-500 uppercase tracking-widest">
-            <span>Powered by Bun & Elysia</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-borderGray"></span>
-            <span>RAG Query Pipeline</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-borderGray"></span>
-            <span>Redis Cache</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-borderGray"></span>
-            <span>Postgres DB</span>
-          </div>
-        </div>
-      </section>
+            <div className="max-w-4xl mx-auto space-y-8 relative z-10">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-1.5 bg-[#121212] border border-borderGray px-3 py-1.5 rounded-full text-xs font-bold text-gray-400 tracking-wider uppercase">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                ALL OF AI. AT ONE PLACE.
+              </div>
 
-      {/* 3. Main Workspace / Pitch Sections */}
-      <main className="max-w-[1480px] w-full mx-auto px-6 py-16 grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Left Column - Articles & Chatbots (8 cols) */}
-        <div className="lg:col-span-8 space-y-16">
-          
-          {/* Section A: Daily AI Articles */}
-          <section id="articles" className="space-y-6">
-            <div className="flex items-center gap-2">
-              <Sparkles size={20} className="text-lightAccent" />
-              <h2 className="text-2xl font-bold tracking-tight">AI Generated Articles</h2>
-              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-extrabold tracking-wider uppercase px-2 py-0.5 rounded">Daily Updates</span>
-            </div>
+              <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.05] text-lightAccent">
+                All AI Announcements, <br/>
+                <span className="text-gray-500">Trends & Jobs. In One Place.</span>
+              </h1>
 
-            {/* Category selection tabs */}
-            <div className="flex flex-wrap gap-2 border-b border-borderGray pb-3">
-              {(["announcements", "jobs", "trends", "tools"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => {
-                    setActiveArticleTab(tab);
-                    setSelectedArticle(null);
-                  }}
-                  className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg border transition-all ${
-                    activeArticleTab === tab
-                      ? "bg-lightAccent text-darkBg border-lightAccent font-extrabold"
-                      : "bg-transparent border-borderGray text-gray-400 hover:border-gray-600"
-                  }`}
+              <p className="text-lg md:text-xl text-textGray max-w-2xl mx-auto font-medium leading-relaxed">
+                Stay ahead of the curve with daily AI-generated briefings, interactive specialized chatbot agents, and real-time live-streams of industry events.
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+                {token ? (
+                  <button 
+                    onClick={handleNavigateToJobs} 
+                    className="w-full sm:w-auto bg-lightAccent text-darkBg hover:bg-white active:scale-95 font-extrabold text-base px-8 py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-200"
+                  >
+                    <span>Enter Remote Jobs Portal</span>
+                    <ArrowUpRight size={18} />
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setShowAuthModal(true)}
+                    className="w-full sm:w-auto bg-lightAccent text-darkBg hover:bg-white active:scale-95 font-extrabold text-base px-8 py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-[0_0_30px_rgba(254,255,245,0.15)]"
+                  >
+                    <span>Get Started with Google</span>
+                    <ArrowUpRight size={18} />
+                  </button>
+                )}
+                
+                <a 
+                  href="#articles" 
+                  className="w-full sm:w-auto border border-borderGray hover:border-lightAccent bg-darkCard/50 hover:bg-darkCard active:scale-95 font-extrabold text-base px-8 py-4 rounded-xl transition-all duration-200"
                 >
-                  {tab}
-                </button>
-              ))}
-            </div>
+                  Explore Features
+                </a>
+              </div>
 
-            {/* Articles Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredArticles.map((article) => (
-                <div
-                  key={article.id}
-                  onClick={() => setSelectedArticle(article)}
-                  className="bg-darkCard hover:bg-[#161616] border border-borderGray hover:border-gray-700 rounded-xl p-5 cursor-pointer flex flex-col justify-between transition-all duration-200 group"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-[11px] font-semibold text-gray-500">
-                      <span>{article.date}</span>
-                      <span>{article.readTime}</span>
-                    </div>
-                    <h3 className="font-bold text-base leading-snug group-hover:text-lightAccent transition-colors">
-                      {article.title}
-                    </h3>
-                    <p className="text-gray-400 text-xs line-clamp-3">
-                      {article.excerpt}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-lightAccent pt-4">
-                    <span>Read Full Article</span>
-                    <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </div>
-              ))}
+              {/* Social Proof/Tech stack badges */}
+              <div className="pt-12 flex flex-wrap justify-center items-center gap-x-8 gap-y-4 text-xs font-semibold text-gray-500 uppercase tracking-widest">
+                <span>Powered by Bun & Elysia</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-borderGray"></span>
+                <span>RAG Query Pipeline</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-borderGray"></span>
+                <span>Redis Cache</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-borderGray"></span>
+                <span>Postgres DB</span>
+              </div>
             </div>
           </section>
 
-          {/* Section B: Specialized AI Chatbots */}
-          <section id="chatbots" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MessageSquare size={20} className="text-lightAccent" />
-                <h2 className="text-2xl font-bold tracking-tight">Specialized Chatbots</h2>
-              </div>
+          {/* 3. Main Workspace / Pitch Sections */}
+          <main className="max-w-[1480px] w-full mx-auto px-6 py-16 grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            {/* Left Column - Articles & Chatbots (8 cols) */}
+            <div className="lg:col-span-8 space-y-16">
               
-              {!token && (
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 px-2.5 py-1 rounded">
-                  <Lock size={12} />
-                  <span>Lock State: Read-Only Preview</span>
+              {/* Section A: Daily AI Articles */}
+              <section id="articles" className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={20} className="text-lightAccent" />
+                  <h2 className="text-2xl font-bold tracking-tight">AI Generated Articles</h2>
+                  <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-extrabold tracking-wider uppercase px-2 py-0.5 rounded">Daily Updates</span>
                 </div>
-              )}
-            </div>
 
-            {/* Chat view framework container */}
-            <div className="border border-borderGray rounded-xl overflow-hidden grid grid-cols-1 md:grid-cols-4 min-h-[500px]">
-              
-              {/* Bots Sidebar (1 col on desktop) */}
-              <div className="bg-[#121212] border-b md:border-b-0 md:border-r border-borderGray p-3 space-y-2">
-                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-2.5 py-1.5">
-                  Select Bot Agent
-                </div>
-                {(["announcements", "jobs", "trends", "tools"] as const).map((category) => {
-                  const botInfo = CHAT_AGENT_METADATA[category];
-                  const isActive = activeChatbot === category;
-                  return (
+                {/* Category selection tabs */}
+                <div className="flex flex-wrap gap-2 border-b border-borderGray pb-3">
+                  {(["announcements", "trends", "tools"] as const).map((tab) => (
                     <button
-                      key={category}
+                      key={tab}
                       onClick={() => {
-                        setActiveChatbot(category);
+                        setActiveArticleTab(tab);
+                        setSelectedArticle(null);
                       }}
-                      className={`w-full flex flex-col items-start p-3 rounded-lg text-left transition-all ${
-                        isActive 
-                          ? "bg-darkCard border border-borderGray text-lightAccent" 
-                          : "hover:bg-darkCard/40 text-gray-500 border border-transparent"
+                      className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg border transition-all ${
+                        activeArticleTab === tab
+                          ? "bg-lightAccent text-darkBg border-lightAccent font-extrabold"
+                          : "bg-transparent border-borderGray text-gray-400 hover:border-gray-600"
                       }`}
                     >
-                      <span className="text-xs font-bold uppercase tracking-wide">{botInfo.name}</span>
-                      <span className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">{category} bot</span>
+                      {tab}
                     </button>
-                  );
-                })}
-              </div>
-
-              {/* Chat Content Panel (3 cols on desktop) */}
-              <div className="md:col-span-3 bg-darkCard flex flex-col justify-between">
-                
-                {/* Active Bot Header */}
-                <div className="bg-[#181818] border-b border-borderGray px-5 py-3.5 flex items-center justify-between">
-                  <div>
-                    <h4 className="font-extrabold text-sm text-lightAccent">
-                      {CHAT_AGENT_METADATA[activeChatbot].name}
-                    </h4>
-                    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">
-                      {CHAT_AGENT_METADATA[activeChatbot].role}
-                    </span>
-                  </div>
-                  
-                  {token && (
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                      Active Session
-                    </span>
-                  )}
+                  ))}
                 </div>
 
-                {/* Message Log View */}
-                <div className="flex-1 p-5 overflow-y-auto space-y-4 max-h-[340px] min-h-[300px]">
-                  {chatHistories[activeChatbot].map((msg, index) => (
-                    <div 
-                      key={index} 
-                      className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
+                {/* Articles Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredArticles.map((article) => (
+                    <div
+                      key={article.id}
+                      onClick={() => setSelectedArticle(article)}
+                      className="bg-darkCard hover:bg-[#161616] border border-borderGray hover:border-gray-700 rounded-xl p-5 cursor-pointer flex flex-col justify-between transition-all duration-200 group"
                     >
-                      <div className={`max-w-[80%] rounded-xl p-3 text-xs leading-relaxed ${
-                        msg.sender === "user" 
-                          ? "bg-lightAccent text-darkBg font-bold rounded-tr-none" 
-                          : "bg-[#181818] border border-borderGray text-lightAccent rounded-tl-none"
-                      }`}>
-                        {msg.text}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-gray-500">
+                          <span>{article.date}</span>
+                          <span>{article.readTime}</span>
+                        </div>
+                        <h3 className="font-bold text-base leading-snug group-hover:text-lightAccent transition-colors">
+                          {article.title}
+                        </h3>
+                        <p className="text-gray-400 text-xs line-clamp-3">
+                          {article.excerpt}
+                        </p>
                       </div>
-                      <span className="text-[9px] text-gray-600 mt-1 px-1">{msg.time}</span>
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-lightAccent pt-4">
+                        <span>Read Full Article</span>
+                        <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                      </div>
                     </div>
                   ))}
-                  <div ref={chatBottomRef} />
                 </div>
+              </section>
 
-                {/* Input Text Form */}
-                <div className="p-4 border-t border-borderGray bg-[#181818]">
-                  {token ? (
-                    <form onSubmit={handleSendMessage} className="flex gap-2">
-                      <input
-                        type="text"
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        placeholder={CHAT_AGENT_METADATA[activeChatbot].placeholder}
-                        className="flex-1 bg-[#121212] border border-borderGray focus:border-lightAccent rounded-lg px-4 py-2.5 text-xs focus:outline-none transition-colors"
-                      />
-                      <button
-                        type="submit"
-                        className="bg-lightAccent hover:bg-white text-darkBg p-2.5 rounded-lg transition-colors"
-                      >
-                        <Send size={16} />
-                      </button>
-                    </form>
-                  ) : (
-                    <div className="text-center py-2">
-                      <p className="text-xs text-gray-500 font-bold mb-2">
-                        🔒 Sign in with Google to start conversing with AI agents.
-                      </p>
-                      <button
-                        onClick={() => setShowAuthModal(true)}
-                        className="bg-lightAccent text-darkBg hover:bg-white text-xs font-extrabold px-4 py-2 rounded-lg transition-colors active:scale-95 inline-flex items-center gap-1.5"
-                      >
-                        <Zap size={12} />
-                        <span>Unlock Chatbot Console</span>
-                      </button>
+              {/* Section B: Specialized AI Chatbots */}
+              <section id="chatbots" className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare size={20} className="text-lightAccent" />
+                    <h2 className="text-2xl font-bold tracking-tight">Specialized Chatbots</h2>
+                  </div>
+                  
+                  {!token && (
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 px-2.5 py-1 rounded">
+                      <Lock size={12} />
+                      <span>Lock State: Read-Only Preview</span>
                     </div>
                   )}
                 </div>
 
-              </div>
-
-            </div>
-          </section>
-
-        </div>
-
-        {/* Right Column - Live Updates Feed & Tech Stack Pitch (4 cols) */}
-        <div className="lg:col-span-4 space-y-8">
-          
-          {/* Section C: Real-Time Updates */}
-          <section id="live-feed" className="bg-darkCard border border-borderGray rounded-xl p-6 space-y-6">
-            <div className="flex items-center gap-2 pb-4 border-b border-borderGray">
-              <Rss size={20} className="text-lightAccent" />
-              <div>
-                <h3 className="font-extrabold text-base text-lightAccent">Real-time updates</h3>
-                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Live Stream Feed</span>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {liveUpdates.map((update) => (
-                <div 
-                  key={update.id} 
-                  className="text-xs flex gap-3 items-start border-b border-[#1c1c1c] pb-3 last:border-0 last:pb-0"
-                >
-                  <div className="mt-0.5">
-                    {update.type === "announcements" && <Cpu size={14} className="text-blue-400" />}
-                    {update.type === "jobs" && <Briefcase size={14} className="text-purple-400" />}
-                    {update.type === "trends" && <TrendingUp size={14} className="text-emerald-400" />}
-                    {update.type === "tools" && <Zap size={14} className="text-yellow-400" />}
-                  </div>
-                  <div className="space-y-1 flex-1">
-                    <p className="text-lightAccent font-semibold leading-snug">
-                      {update.title}
-                    </p>
-                    <div className="flex items-center justify-between text-[10px] text-gray-500">
-                      <span>{update.source}</span>
-                      <span className="font-bold text-[#454545]">{update.timeAgo}</span>
+                {/* Chat view framework container */}
+                <div className="border border-borderGray rounded-xl overflow-hidden grid grid-cols-1 md:grid-cols-4 min-h-[500px]">
+                  
+                  {/* Bots Sidebar (1 col on desktop) */}
+                  <div className="bg-[#121212] border-b md:border-b-0 md:border-r border-borderGray p-3 space-y-2">
+                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-2.5 py-1.5">
+                      Select Bot Agent
                     </div>
+                    {(["announcements", "jobs", "trends", "tools"] as const).map((category) => {
+                      const botInfo = CHAT_AGENT_METADATA[category];
+                      const isActive = activeChatbot === category;
+                      return (
+                        <button
+                          key={category}
+                          onClick={() => {
+                            setActiveChatbot(category);
+                          }}
+                          className={`w-full flex flex-col items-start p-3 rounded-lg text-left transition-all ${
+                            isActive 
+                              ? "bg-darkCard border border-borderGray text-lightAccent" 
+                              : "hover:bg-darkCard/40 text-gray-500 border border-transparent"
+                          }`}
+                        >
+                          <span className="text-xs font-bold uppercase tracking-wide">{botInfo.name}</span>
+                          <span className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">{category} bot</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Chat Content Panel (3 cols on desktop) */}
+                  <div className="md:col-span-3 bg-darkCard flex flex-col justify-between">
+                    
+                    {/* Active Bot Header */}
+                    <div className="bg-[#181818] border-b border-borderGray px-5 py-3.5 flex items-center justify-between">
+                      <div>
+                        <h4 className="font-extrabold text-sm text-lightAccent">
+                          {CHAT_AGENT_METADATA[activeChatbot].name}
+                        </h4>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">
+                          {CHAT_AGENT_METADATA[activeChatbot].role}
+                        </span>
+                      </div>
+                      
+                      {token && (
+                        <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                          Active Session
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Message Log View */}
+                    <div className="flex-1 p-5 overflow-y-auto space-y-4 max-h-[340px] min-h-[300px]">
+                      {chatHistories[activeChatbot].map((msg, index) => (
+                        <div 
+                          key={index} 
+                          className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
+                        >
+                          <div className={`max-w-[80%] rounded-xl p-3 text-xs leading-relaxed ${
+                            msg.sender === "user" 
+                              ? "bg-lightAccent text-darkBg font-bold rounded-tr-none" 
+                              : "bg-[#181818] border border-borderGray text-lightAccent rounded-tl-none"
+                          }`}>
+                            {msg.text}
+                          </div>
+                          <span className="text-[9px] text-gray-600 mt-1 px-1">{msg.time}</span>
+                        </div>
+                      ))}
+                      <div ref={chatBottomRef} />
+                    </div>
+
+                    {/* Input Text Form */}
+                    <div className="p-4 border-t border-borderGray bg-[#181818]">
+                      {token ? (
+                        <form onSubmit={handleSendMessage} className="flex gap-2">
+                          <input
+                            type="text"
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            placeholder={CHAT_AGENT_METADATA[activeChatbot].placeholder}
+                            className="flex-1 bg-[#121212] border border-borderGray focus:border-lightAccent rounded-lg px-4 py-2.5 text-xs focus:outline-none transition-colors"
+                          />
+                          <button
+                            type="submit"
+                            className="bg-lightAccent hover:bg-white text-darkBg p-2.5 rounded-lg transition-colors"
+                          >
+                            <Send size={16} />
+                          </button>
+                        </form>
+                      ) : (
+                        <div className="text-center py-2">
+                          <p className="text-xs text-gray-500 font-bold mb-2">
+                            🔒 Sign in with Google to start conversing with AI agents.
+                          </p>
+                          <button
+                            onClick={() => setShowAuthModal(true)}
+                            className="bg-lightAccent text-darkBg hover:bg-white text-xs font-extrabold px-4 py-2 rounded-lg transition-colors active:scale-95 inline-flex items-center gap-1.5"
+                          >
+                            <Zap size={12} />
+                            <span>Unlock Chatbot Console</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+
+                </div>
+              </section>
+
+            </div>
+
+            {/* Right Column - Live Updates Feed & Tech Stack Pitch (4 cols) */}
+            <div className="lg:col-span-4 space-y-8">
+              
+              {/* Section C: Real-Time Updates */}
+              <section id="live-feed" className="bg-darkCard border border-borderGray rounded-xl p-6 space-y-6">
+                <div className="flex items-center gap-2 pb-4 border-b border-borderGray">
+                  <Rss size={20} className="text-lightAccent" />
+                  <div>
+                    <h3 className="font-extrabold text-base text-lightAccent">Real-time updates</h3>
+                    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Live Stream Feed</span>
                   </div>
                 </div>
-              ))}
+
+                <div className="space-y-4">
+                  {liveUpdates.map((update) => (
+                    <div 
+                      key={update.id} 
+                      className="text-xs flex gap-3 items-start border-b border-[#1c1c1c] pb-3 last:border-0 last:pb-0"
+                    >
+                      <div className="mt-0.5">
+                        {update.type === "announcements" && <Cpu size={14} className="text-blue-400" />}
+                        {update.type === "jobs" && <Briefcase size={14} className="text-purple-400" />}
+                        {update.type === "trends" && <TrendingUp size={14} className="text-emerald-400" />}
+                        {update.type === "tools" && <Zap size={14} className="text-yellow-400" />}
+                      </div>
+                      <div className="space-y-1 flex-1">
+                        <p className="text-lightAccent font-semibold leading-snug">
+                          {update.title}
+                        </p>
+                        <div className="flex items-center justify-between text-[10px] text-gray-500">
+                          <span>{update.source}</span>
+                          <span className="font-bold text-[#454545]">{update.timeAgo}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Architecture Stack Details */}
+              <section id="tech-stack" className="bg-darkCard border border-borderGray rounded-xl p-6 space-y-6">
+                <div className="flex items-center gap-2 pb-4 border-b border-borderGray">
+                  <Terminal size={18} className="text-lightAccent" />
+                  <h3 className="font-extrabold text-base text-lightAccent">System Architecture</h3>
+                </div>
+
+                <div className="space-y-4 text-xs">
+                  <div className="space-y-1">
+                    <span className="text-gray-500 font-bold uppercase tracking-widest text-[9px] block">RAG pipeline</span>
+                    <p className="text-lightAccent font-medium">OpenRouter Free Models with PostgreSQL PGVector storage to ingest and query latest bulletins.</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-gray-500 font-bold uppercase tracking-widest text-[9px] block">High Performance Backend</span>
+                    <p className="text-lightAccent font-medium">Bun runtime coupled with Elysia web framework serving requests at sub-millisecond latency.</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-gray-500 font-bold uppercase tracking-widest text-[9px] block">Database & Cache layer</span>
+                    <p className="text-lightAccent font-medium">Neon serverless PostgreSQL database running migrations with Prisma ORM. Redis tracks rate-limits.</p>
+                  </div>
+                </div>
+              </section>
+
             </div>
-          </section>
 
-          {/* Architecture Stack Details */}
-          <section id="tech-stack" className="bg-darkCard border border-borderGray rounded-xl p-6 space-y-6">
-            <div className="flex items-center gap-2 pb-4 border-b border-borderGray">
-              <Terminal size={18} className="text-lightAccent" />
-              <h3 className="font-extrabold text-base text-lightAccent">System Architecture</h3>
+          </main>
+        </>
+      ) : token ? (
+        /* Standalone Remote Jobs Page View */
+        <main className="max-w-[1480px] w-full mx-auto px-6 py-12 flex-1 flex flex-col gap-8">
+          <div className="flex flex-col gap-4 border-b border-borderGray pb-6">
+            <button 
+              onClick={() => setCurrentPage("home")} 
+              className="text-xs text-gray-400 hover:text-lightAccent flex items-center gap-1.5 transition-colors font-bold w-fit"
+            >
+              <ChevronRight size={14} className="rotate-180" /> 
+              <span>Back to Homepage</span>
+            </button>
+            
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-lightAccent">
+                  Remote AI & Tech Jobs
+                </h1>
+                <p className="text-xs text-gray-500 font-medium mt-1">
+                  Discover premium remote machine learning, engineering, design, and writing opportunities.
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-2 text-xs font-bold text-gray-400 bg-[#121212] border border-borderGray px-3 py-1.5 rounded-lg w-fit">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Sourced from Remotive API</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {/* Job board filters */}
+            <div className="bg-[#121212] border border-borderGray rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              {/* Search box */}
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  fetchJobs();
+                }}
+                className="flex items-center gap-2 bg-[#0d0d0d] border border-borderGray rounded-lg px-3 py-1.5 flex-1 max-w-md focus-within:border-lightAccent transition-colors"
+              >
+                <Search size={16} className="text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Search jobs, companies or tags..."
+                  value={jobsSearch}
+                  onChange={(e) => setJobsSearch(e.target.value)}
+                  className="bg-transparent border-0 text-xs text-lightAccent focus:outline-none w-full"
+                />
+                <button 
+                  type="submit"
+                  className="text-[10px] uppercase font-bold text-gray-400 hover:text-lightAccent transition-colors"
+                >
+                  Find
+                </button>
+              </form>
+
+              {/* Category Dropdown */}
+              <div className="flex flex-wrap items-center gap-3">
+                <select
+                  value={jobsCategory}
+                  onChange={(e) => setJobsCategory(e.target.value)}
+                  className="bg-[#0d0d0d] border border-borderGray rounded-lg px-3 py-2 text-xs text-lightAccent focus:outline-none focus:border-lightAccent cursor-pointer"
+                >
+                  <option value="">All Tech Roles</option>
+                  <option value="software-dev">Software Development</option>
+                  <option value="artificial-intelligence">Artificial Intelligence</option>
+                  <option value="data-and-analytics">Data & Analytics</option>
+                  <option value="product-management">Product Management</option>
+                  <option value="writing">Writing</option>
+                  <option value="design">Design</option>
+                </select>
+
+                {/* AI Only filter toggle */}
+                <button
+                  onClick={() => setAiOnly(!aiOnly)}
+                  className={`px-3 py-2 rounded-lg text-xs font-bold transition-all border flex items-center gap-1.5 ${
+                    aiOnly
+                      ? "bg-purple-500/10 border-purple-500/30 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.1)]"
+                      : "bg-transparent border-borderGray text-gray-500 hover:border-gray-700"
+                  }`}
+                >
+                  <Cpu size={14} className={aiOnly ? "animate-pulse" : ""} />
+                  <span>AI & ML Only</span>
+                </button>
+
+                {/* Reload Button */}
+                <button
+                  onClick={fetchJobs}
+                  disabled={loadingJobs}
+                  className="p-2 border border-borderGray rounded-lg text-gray-500 hover:text-lightAccent active:scale-95 transition-all disabled:opacity-50"
+                  title="Refresh listings"
+                >
+                  <RefreshCw size={14} className={loadingJobs ? "animate-spin" : ""} />
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-4 text-xs">
-              <div className="space-y-1">
-                <span className="text-gray-500 font-bold uppercase tracking-widest text-[9px] block">RAG pipeline</span>
-                <p className="text-lightAccent font-medium">OpenRouter Free Models with PostgreSQL PGVector storage to ingest and query latest bulletins.</p>
+            {/* Job board grid */}
+            {loadingJobs ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="bg-darkCard border border-borderGray rounded-xl p-5 space-y-4 animate-pulse">
+                    <div className="flex justify-between items-center">
+                      <div className="w-10 h-10 bg-[#212121] rounded-lg"></div>
+                      <div className="w-16 h-4 bg-[#212121] rounded"></div>
+                    </div>
+                    <div className="h-5 bg-[#212121] rounded w-3/4"></div>
+                    <div className="h-3 bg-[#212121] rounded w-1/2"></div>
+                    <div className="flex gap-2 pt-2">
+                      <div className="w-12 h-4 bg-[#212121] rounded"></div>
+                      <div className="w-16 h-4 bg-[#212121] rounded"></div>
+                    </div>
+                  </div>
+                ))}
               </div>
+            ) : jobsError ? (
+              <div className="border border-red-500/20 bg-red-500/5 rounded-xl p-8 text-center space-y-4">
+                <p className="text-xs text-red-400">{jobsError}</p>
+                <button
+                  onClick={fetchJobs}
+                  className="bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-xs font-bold px-4 py-2 rounded-lg transition-all"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : jobs.length === 0 ? (
+              <div className="border border-borderGray bg-darkCard/50 rounded-xl p-12 text-center space-y-2">
+                <Briefcase size={24} className="text-gray-600 mx-auto" />
+                <h4 className="font-bold text-sm text-lightAccent">No Remote Jobs Found</h4>
+                <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                  No jobs matched your search criteria. Try toggling the "AI & ML Only" filter or using a different category.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {jobs.map((job) => (
+                  <div
+                    key={job.id}
+                    className="bg-darkCard border border-borderGray hover:border-gray-700 rounded-xl p-5 flex flex-col justify-between transition-all duration-200 group relative shadow-md"
+                  >
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          {job.company_logo ? (
+                            <img
+                              src={job.company_logo}
+                              alt={job.company_name}
+                              className="w-10 h-10 rounded-lg object-contain bg-[#1c1c1c] border border-borderGray p-1"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = "none";
+                              }}
+                            />
+                          ) : null}
+                          <div className="w-10 h-10 rounded-lg bg-[#212121] flex items-center justify-center font-bold text-sm text-lightAccent border border-borderGray group-hover:bg-[#333] transition-colors first-letter-fallback">
+                            {job.company_name?.charAt(0) || "J"}
+                          </div>
+                          <div>
+                            <span className="font-bold text-xs text-gray-400 block">{job.company_name}</span>
+                            <div className="flex items-center gap-1 text-[10px] text-gray-500 font-semibold mt-0.5">
+                              <Globe size={10} />
+                              <span>{job.candidate_required_location || "Remote"}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider bg-[#181818] border border-borderGray px-2 py-0.5 rounded">
+                          {new Date(job.publication_date).toLocaleDateString([], { month: "short", day: "numeric" })}
+                        </span>
+                      </div>
 
-              <div className="space-y-1">
-                <span className="text-gray-500 font-bold uppercase tracking-widest text-[9px] block">High Performance Backend</span>
-                <p className="text-lightAccent font-medium">Bun runtime coupled with Elysia web framework serving requests at sub-millisecond latency.</p>
-              </div>
+                      <div>
+                        <h3 className="font-extrabold text-sm leading-snug group-hover:text-lightAccent transition-colors">
+                          {job.title}
+                        </h3>
+                        
+                        {/* Salary details if present */}
+                        {job.salary && (
+                          <div className="flex items-center gap-1 text-emerald-400 font-bold text-[10px] mt-1.5 bg-emerald-500/5 border border-emerald-500/10 px-2 py-0.5 rounded w-fit">
+                            <DollarSign size={10} />
+                            <span>{job.salary}</span>
+                          </div>
+                        )}
+                      </div>
 
-              <div className="space-y-1">
-                <span className="text-gray-500 font-bold uppercase tracking-widest text-[9px] block">Database & Cache layer</span>
-                <p className="text-lightAccent font-medium">Neon serverless PostgreSQL database running migrations with Prisma ORM. Redis tracks rate-limits.</p>
+                      {/* Tags */}
+                      {job.tags && job.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {job.tags.slice(0, 5).map((tag: string, idx: number) => (
+                            <span
+                              key={idx}
+                              className="text-[9px] font-bold text-gray-400 bg-[#181818] border border-borderGray px-2 py-0.5 rounded"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-[#1c1c1c] mt-5 pt-3.5">
+                      <button
+                        onClick={() => setSelectedJob(job)}
+                        className="text-xs font-bold text-gray-400 hover:text-lightAccent transition-colors"
+                      >
+                        View Details
+                      </button>
+                      
+                      <a
+                        href={job.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-lightAccent hover:underline"
+                      >
+                        <span>Apply</span>
+                        <ArrowUpRight size={12} />
+                      </a>
+                    </div>
+                  </div>
+                ))}
               </div>
+            )}
+          </div>
+        </main>
+      ) : (
+        /* Authenticated-only gate wall */
+        <div className="flex-1 max-w-[1480px] w-full mx-auto px-6 py-20 flex flex-col items-center justify-center text-center">
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#212121_1px,transparent_1px),linear-gradient(to_bottom,#212121_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-20 pointer-events-none"></div>
+          <div className="max-w-md w-full bg-darkCard border border-borderGray rounded-2xl p-8 space-y-6 relative z-10 shadow-2xl">
+            <div className="w-16 h-16 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-full flex items-center justify-center mx-auto animate-pulse">
+              <Lock size={32} />
             </div>
-          </section>
-
+            <div className="space-y-2">
+              <h2 className="text-2xl font-extrabold text-lightAccent tracking-tight">Access Locked</h2>
+              <p className="text-xs text-textGray leading-relaxed">
+                Join our premium community to search, filter, and apply for the latest AI and tech remote jobs from Remotive. Caching enabled for real-time updates.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="w-full bg-lightAccent text-darkBg hover:bg-white active:scale-95 font-extrabold text-sm py-3.5 rounded-xl transition-all duration-200 shadow-[0_0_20px_rgba(254,255,245,0.1)] flex items-center justify-center gap-2"
+            >
+              <Zap size={14} />
+              <span>Sign In / Sign Up to Unlock</span>
+            </button>
+            <button
+              onClick={() => setCurrentPage("home")}
+              className="w-full text-xs text-gray-500 hover:text-lightAccent transition-colors font-bold uppercase tracking-wider animate-pulse"
+            >
+              Back to Homepage
+            </button>
+          </div>
         </div>
-
-      </main>
+      )}
 
       {/* 4. Footer */}
       <footer className="mt-auto border-t border-borderGray bg-[#0d0d0d] py-12 px-6">
@@ -760,6 +1086,96 @@ export default function App() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. Job Detail Modal */}
+      {selectedJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#121212] border border-borderGray rounded-2xl w-full max-w-[700px] p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto">
+            <button
+              onClick={() => setSelectedJob(null)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-lightAccent transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <div className="space-y-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  {selectedJob.company_logo ? (
+                    <img
+                      src={selectedJob.company_logo}
+                      alt={selectedJob.company_name}
+                      className="w-12 h-12 rounded-xl object-contain bg-[#1c1c1c] border border-borderGray p-1.5"
+                    />
+                  ) : null}
+                  <div>
+                    <span className="text-xs font-bold text-purple-400 uppercase tracking-widest block">
+                      {selectedJob.company_name}
+                    </span>
+                    <h2 className="text-xl font-extrabold text-lightAccent mt-0.5 leading-tight">
+                      {selectedJob.title}
+                    </h2>
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 font-semibold mt-1">
+                      <div className="flex items-center gap-1">
+                        <Globe size={12} />
+                        <span>{selectedJob.candidate_required_location || "Remote"}</span>
+                      </div>
+                      {selectedJob.salary && (
+                        <div className="flex items-center gap-1 text-emerald-400 font-bold">
+                          <DollarSign size={12} />
+                          <span>{selectedJob.salary}</span>
+                        </div>
+                      )}
+                      <span>•</span>
+                      <span>Published {new Date(selectedJob.publication_date).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tags */}
+              {selectedJob.tags && selectedJob.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedJob.tags.map((tag: string, idx: number) => (
+                    <span
+                      key={idx}
+                      className="text-[10px] font-bold text-gray-300 bg-[#181818] border border-borderGray px-2.5 py-1 rounded"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="border-t border-borderGray pt-5">
+                <h4 className="text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-3">Job Description</h4>
+                {/* Description content */}
+                <div 
+                  className="text-xs text-textGray leading-relaxed space-y-4 max-h-[350px] overflow-y-auto pr-2 border border-borderGray/30 rounded-xl p-4 bg-[#0d0d0d] prose-style-override"
+                  dangerouslySetInnerHTML={{ __html: selectedJob.description }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between border-t border-borderGray pt-5 mt-6">
+                <button
+                  onClick={() => setSelectedJob(null)}
+                  className="border border-borderGray hover:border-gray-500 text-xs font-bold px-5 py-2.5 rounded-xl transition-all active:scale-95"
+                >
+                  Close Description
+                </button>
+                <a
+                  href={selectedJob.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-lightAccent text-darkBg hover:bg-white text-xs font-extrabold px-6 py-2.5 rounded-xl inline-flex items-center gap-1.5 active:scale-95 transition-all shadow-[0_0_20px_rgba(254,255,245,0.1)]"
+                >
+                  <span>Apply for this Job</span>
+                  <ArrowUpRight size={14} />
+                </a>
+              </div>
             </div>
           </div>
         </div>
