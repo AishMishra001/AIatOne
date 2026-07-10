@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Auth } from "./components/Auth";
+import { Leaderboard } from "./components/Leaderboard";
+import Resources from "./components/Resources";
 import { 
-  Sparkles, 
   MessageSquare, 
   Rss, 
   LogOut, 
@@ -23,15 +24,6 @@ import {
 } from "lucide-react";
 
 // Types
-interface Article {
-  id: number;
-  title: string;
-  excerpt: string;
-  content: string;
-  category: "announcements" | "jobs" | "trends" | "tools";
-  date: string;
-  readTime: string;
-}
 
 interface Message {
   sender: "user" | "bot";
@@ -48,80 +40,6 @@ interface LiveUpdate {
 }
 
 // Mock Data
-const MOCK_ARTICLES: Article[] = [
-  {
-    id: 1,
-    title: "OpenAI Announces Project Strawberry: Advanced Reasoning Upgrades",
-    excerpt: "A deep dive into OpenAI's latest reasoning upgrades enabling self-improving code pipelines and logic capabilities.",
-    content: "OpenAI has officially unveiled its new reasoning-focused updates, internally codenamed Project Strawberry. This architecture represents a significant departure from standard next-token prediction, incorporating planning stages and multi-step validation checks before producing output. Developers have reported substantial performance boosts on complex software engineering benchmarks and mathematical proofs.",
-    category: "announcements",
-    date: "June 28, 2026",
-    readTime: "4 min read"
-  },
-  {
-    id: 2,
-    title: "Anthropic Releases Claude 4: The Next Frontier in Coding Agency",
-    excerpt: "Claude 4 sets a new standard for fully agentic workflows, displaying direct file-system execution and terminal control.",
-    content: "Anthropic's latest model, Claude 4, is now live. Designed from the ground up for agentic execution, it features a native sandboxed environment allowing the model to write, compile, and execute full-stack code independently. The model scored 87% on the SWE-bench verified dataset, eclipsing all previous systems.",
-    category: "announcements",
-    date: "June 27, 2026",
-    readTime: "5 min read"
-  },
-  {
-    id: 3,
-    title: "Senior AI Researcher - Google DeepMind",
-    excerpt: "Location: London, UK / Hybrid. Salary: £180,000 - £260,000 + Equity. Join the team building the next generation of AlphaFold models.",
-    content: "Google DeepMind is looking for a Senior AI Researcher to drive breakthroughs in physical intelligence and biological modeling. Candidates should have a strong publication record in top-tier machine learning conferences (NeurIPS, ICML, ICLR) and hands-on experience scaling large multi-modal architectures.",
-    category: "jobs",
-    date: "June 28, 2026",
-    readTime: "3 min read"
-  },
-  {
-    id: 4,
-    title: "Lead Prompt Engineer & Agent architect - Anthropic",
-    excerpt: "Location: San Francisco, CA. Salary: $250,000 - $370,000. Design state-of-the-art system prompts and agentic behaviors.",
-    content: "Anthropic is hiring a Lead Prompt Engineer to spearhead system instruction design for Claude. You will collaborate directly with model training teams to create robust, jailbreak-resistant instructions and structure output formats for external tool integration.",
-    category: "jobs",
-    date: "June 26, 2026",
-    readTime: "2 min read"
-  },
-  {
-    id: 5,
-    title: "The Rise of Small, Local Models (SLMs) in Enterprise",
-    excerpt: "Why companies are shifting away from massive APIs and adopting fine-tuned 8B models running locally on-premise.",
-    content: "Enterprise architectures are witnessing a rapid shift. Rather than routing sensitive client data to external cloud APIs, organizations are deploying open weights models like Llama 3 8B and Phi 3. These models are heavily fine-tuned on company documents, and when deployed locally, they reduce latency by 60% and ensure absolute data privacy.",
-    category: "trends",
-    date: "June 28, 2026",
-    readTime: "6 min read"
-  },
-  {
-    id: 6,
-    title: "Vector DB Optimization: HNSW vs. IVF-PQ Indexing",
-    excerpt: "An in-depth analysis of retrieval speeds and memory footprints under different indexing structures.",
-    content: "As RAG pipelines scale, vector search latency becomes a major bottleneck. This article compares Hierarchical Navigable Small World (HNSW) graphs against Inverted File with Product Quantization (IVF-PQ). We explore how memory constraints dictate index choices and provide performance benchmarks.",
-    category: "trends",
-    date: "June 25, 2026",
-    readTime: "8 min read"
-  },
-  {
-    id: 7,
-    title: "Bolt.new: Instant Full-Stack App Creator",
-    excerpt: "A look into the browser-based IDE that spins up complete React + Node.js backends from a single natural language prompt.",
-    content: "Bolt.new has taken the developer community by storm. By compiling Node modules inside WebContainers in the browser, it allows users to boot up a full-stack project, edit files dynamically, and deploy directly to Netlify/Vercel with a single click, all controlled by an AI chat assistant.",
-    category: "tools",
-    date: "June 28, 2026",
-    readTime: "3 min read"
-  },
-  {
-    id: 8,
-    title: "v0.dev Upgraded: Figma Designs to Fully Operational Code",
-    excerpt: "Vercel's generative UI tool now integrates Figma APIs, outputting clean, production-ready Tailwind Components.",
-    content: "Vercel has released a major upgrade to v0.dev. Developers can now paste raw Figma file URLs directly into the chat prompt. The assistant parses the layout hierarchy, color tokens, and styling constraints, returning modular, fully-typed React code with Tailwind CSS classes.",
-    category: "tools",
-    date: "June 24, 2026",
-    readTime: "4 min read"
-  }
-];
 
 const INITIAL_LIVE_UPDATES: LiveUpdate[] = [
   { id: 1, type: "announcements", title: "OpenAI releases GPT-4o-mini globally", timeAgo: "1m ago", source: "OpenAI Blog" },
@@ -187,12 +105,8 @@ export default function App() {
   const [userEmail, setUserEmail] = useState<string | null>(localStorage.getItem("userEmail"));
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // Articles State
-  const [activeArticleTab, setActiveArticleTab] = useState<"announcements" | "trends" | "tools">("announcements");
-  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
-
   // Page Routing State
-  const [currentPage, setCurrentPage] = useState<"home" | "jobs">("home");
+  const [currentPage, setCurrentPage] = useState<"home" | "jobs" | "news" | "leaderboard" | "resources">("home");
 
   // Remotive Jobs State
   const [jobs, setJobs] = useState<any[]>([]);
@@ -202,6 +116,12 @@ export default function App() {
   const [jobsCategory, setJobsCategory] = useState(""); // "" represents all
   const [aiOnly, setAiOnly] = useState(true); // default to true to focus on AI/ML roles
   const [selectedJob, setSelectedJob] = useState<any | null>(null);
+
+  // Live News Feed State
+  const [news, setNews] = useState<any[]>([]);
+  const [loadingNews, setLoadingNews] = useState(false);
+  const [newsError, setNewsError] = useState<string | null>(null);
+  const [newsSearch, setNewsSearch] = useState("");
 
   const fetchJobs = async () => {
     setLoadingJobs(true);
@@ -228,11 +148,37 @@ export default function App() {
     }
   };
 
+  const fetchNews = async () => {
+    setLoadingNews(true);
+    setNewsError(null);
+    try {
+      const res = await fetch("http://localhost:3000/api/news");
+      if (!res.ok) throw new Error("Failed to fetch AI news");
+      const data = await res.json();
+      if (data.status === "ok") {
+        setNews(data.news || []);
+      } else {
+        throw new Error(data.message || "Failed to retrieve AI news");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setNewsError(err.message || "Unable to load news. Make sure the Elysia backend is running.");
+    } finally {
+      setLoadingNews(false);
+    }
+  };
+
   useEffect(() => {
     if (currentPage === "jobs" && token) {
       fetchJobs();
     }
   }, [currentPage, jobsCategory, aiOnly, token]);
+
+  useEffect(() => {
+    if (currentPage === "news") {
+      fetchNews();
+    }
+  }, [currentPage]);
 
   const handleNavigateToJobs = () => {
     if (!token) {
@@ -364,7 +310,18 @@ export default function App() {
     }, 800);
   };
 
-  const filteredArticles = MOCK_ARTICLES.filter(a => a.category === activeArticleTab);
+
+
+  const filteredNews = news.filter(item => {
+    if (!newsSearch) return true;
+    const s = newsSearch.toLowerCase();
+    return (
+      item.title?.toLowerCase().includes(s) ||
+      item.description?.toLowerCase().includes(s) ||
+      item.source?.toLowerCase().includes(s) ||
+      item.author?.toLowerCase().includes(s)
+    );
+  });
 
   return (
     <div className="min-h-screen bg-darkBg text-lightAccent flex flex-col font-satoshi selection:bg-lightAccent selection:text-darkBg">
@@ -397,9 +354,25 @@ export default function App() {
               <span>Remote Jobs</span>
               {!token && <Lock size={12} className="text-yellow-500/80 animate-pulse" />}
             </button>
-            <a href="#articles" onClick={() => setCurrentPage("home")} className="hover:text-lightAccent transition-colors">Daily Articles</a>
+            <button 
+              onClick={() => setCurrentPage("resources")}
+              className={`hover:text-lightAccent transition-colors ${currentPage === "resources" ? "text-lightAccent font-extrabold" : ""}`}
+            >
+              Resources
+            </button>
             <a href="#chatbots" onClick={() => setCurrentPage("home")} className="hover:text-lightAccent transition-colors">Specialized Chatbots</a>
-            <a href="#live-feed" onClick={() => setCurrentPage("home")} className="hover:text-lightAccent transition-colors">Live Feed</a>
+            <button 
+              onClick={() => setCurrentPage("leaderboard")}
+              className={`hover:text-lightAccent transition-colors ${currentPage === "leaderboard" ? "text-lightAccent font-extrabold" : ""}`}
+            >
+              Model Rankings
+            </button>
+            <button 
+              onClick={() => setCurrentPage("news")}
+              className={`hover:text-lightAccent transition-colors ${currentPage === "news" ? "text-lightAccent font-extrabold" : ""}`}
+            >
+              Live Feed
+            </button>
           </nav>
 
           {/* Right Action buttons */}
@@ -476,10 +449,10 @@ export default function App() {
                 )}
                 
                 <a 
-                  href="#articles" 
+                  href="#chatbots" 
                   className="w-full sm:w-auto border border-borderGray hover:border-lightAccent bg-darkCard/50 hover:bg-darkCard active:scale-95 font-extrabold text-base px-8 py-4 rounded-xl transition-all duration-200"
                 >
-                  Explore Features
+                  Explore Chatbots
                 </a>
               </div>
 
@@ -502,62 +475,7 @@ export default function App() {
             {/* Left Column - Articles & Chatbots (8 cols) */}
             <div className="lg:col-span-8 space-y-16">
               
-              {/* Section A: Daily AI Articles */}
-              <section id="articles" className="space-y-6">
-                <div className="flex items-center gap-2">
-                  <Sparkles size={20} className="text-lightAccent" />
-                  <h2 className="text-2xl font-bold tracking-tight">AI Generated Articles</h2>
-                  <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-extrabold tracking-wider uppercase px-2 py-0.5 rounded">Daily Updates</span>
-                </div>
 
-                {/* Category selection tabs */}
-                <div className="flex flex-wrap gap-2 border-b border-borderGray pb-3">
-                  {(["announcements", "trends", "tools"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => {
-                        setActiveArticleTab(tab);
-                        setSelectedArticle(null);
-                      }}
-                      className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg border transition-all ${
-                        activeArticleTab === tab
-                          ? "bg-lightAccent text-darkBg border-lightAccent font-extrabold"
-                          : "bg-transparent border-borderGray text-gray-400 hover:border-gray-600"
-                      }`}
-                    >
-                      {tab}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Articles Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredArticles.map((article) => (
-                    <div
-                      key={article.id}
-                      onClick={() => setSelectedArticle(article)}
-                      className="bg-darkCard hover:bg-[#161616] border border-borderGray hover:border-gray-700 rounded-xl p-5 cursor-pointer flex flex-col justify-between transition-all duration-200 group"
-                    >
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between text-[11px] font-semibold text-gray-500">
-                          <span>{article.date}</span>
-                          <span>{article.readTime}</span>
-                        </div>
-                        <h3 className="font-bold text-base leading-snug group-hover:text-lightAccent transition-colors">
-                          {article.title}
-                        </h3>
-                        <p className="text-gray-400 text-xs line-clamp-3">
-                          {article.excerpt}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-lightAccent pt-4">
-                        <span>Read Full Article</span>
-                        <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
 
               {/* Section B: Specialized AI Chatbots */}
               <section id="chatbots" className="space-y-6">
@@ -756,6 +674,197 @@ export default function App() {
 
           </main>
         </>
+      ) : currentPage === "leaderboard" ? (
+        <Leaderboard onBackToHome={() => setCurrentPage("home")} />
+      ) : currentPage === "resources" ? (
+        <Resources onBackToHome={() => setCurrentPage("home")} />
+      ) : currentPage === "news" ? (
+        /* Standalone Live AI News Feed Page View */
+        <main className="max-w-[1480px] w-full mx-auto px-6 py-12 flex-1 flex flex-col gap-8">
+          {/* Top Back navigation and status */}
+          <div className="flex flex-col gap-4 border-b border-borderGray pb-6">
+            <button 
+              onClick={() => setCurrentPage("home")} 
+              className="text-xs text-gray-400 hover:text-lightAccent flex items-center gap-1.5 transition-colors font-bold w-fit"
+            >
+              <ChevronRight size={14} className="rotate-180" /> 
+              <span>Back to Homepage</span>
+            </button>
+            
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-lightAccent">
+                    Live AI News Feed
+                  </h1>
+                  <div className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full text-[9px] font-bold text-red-400 uppercase tracking-wider h-fit">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
+                    <span>Live Updates</span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 font-medium">
+                  Real-time announcements, model releases, and breakthroughs aggregated from global publishers.
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-2 text-xs font-bold text-gray-400 bg-[#121212] border border-borderGray px-3 py-1.5 rounded-lg w-fit">
+                <Globe size={12} className="text-gray-500" />
+                <span>Powered by Currents API</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {/* Search and Action Bar */}
+            <div className="bg-[#121212] border border-borderGray rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              {/* Search input */}
+              <div className="flex items-center gap-2 bg-[#0d0d0d] border border-borderGray rounded-lg px-3 py-1.5 flex-1 max-w-md focus-within:border-lightAccent transition-colors">
+                <Search size={16} className="text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Search articles, keywords or sources..."
+                  value={newsSearch}
+                  onChange={(e) => setNewsSearch(e.target.value)}
+                  className="bg-transparent border-0 text-xs text-lightAccent focus:outline-none w-full"
+                />
+                {newsSearch && (
+                  <button onClick={() => setNewsSearch("")} className="text-gray-500 hover:text-lightAccent transition-colors">
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-3">
+                <div className="text-xs text-gray-500 font-medium">
+                  Showing {filteredNews.length} of {news.length} articles
+                </div>
+                <button
+                  onClick={fetchNews}
+                  disabled={loadingNews}
+                  className="p-2 border border-borderGray rounded-lg text-gray-500 hover:text-lightAccent active:scale-95 transition-all disabled:opacity-50 flex items-center gap-1.5 text-xs font-bold"
+                  title="Reload feed"
+                >
+                  <RefreshCw size={14} className={loadingNews ? "animate-spin" : ""} />
+                  <span>Refresh</span>
+                </button>
+              </div>
+            </div>
+
+            {/* News Articles Grid */}
+            {loadingNews ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="bg-darkCard border border-borderGray rounded-xl overflow-hidden space-y-4 animate-pulse">
+                    <div className="aspect-video bg-[#212121]"></div>
+                    <div className="p-5 space-y-3">
+                      <div className="h-3 bg-[#212121] rounded w-1/4"></div>
+                      <div className="h-5 bg-[#212121] rounded w-11/12"></div>
+                      <div className="h-3 bg-[#212121] rounded w-full"></div>
+                      <div className="h-3 bg-[#212121] rounded w-2/3"></div>
+                      <div className="h-8 bg-[#212121] rounded w-full pt-4"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : newsError ? (
+              <div className="border border-red-500/20 bg-red-500/5 rounded-xl p-12 text-center space-y-4 max-w-xl mx-auto">
+                <p className="text-xs text-red-400">{newsError}</p>
+                <button
+                  onClick={fetchNews}
+                  className="bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-xs font-bold px-5 py-2.5 rounded-xl transition-all"
+                >
+                  Retry Loading News
+                </button>
+              </div>
+            ) : filteredNews.length === 0 ? (
+              <div className="border border-borderGray bg-darkCard/50 rounded-xl p-16 text-center space-y-3 max-w-xl mx-auto">
+                <Rss size={28} className="text-gray-600 mx-auto" />
+                <h4 className="font-bold text-sm text-lightAccent">No AI News Found</h4>
+                <p className="text-xs text-gray-500">
+                  No articles matched your search query. Try clearing your filters or searching other keywords.
+                </p>
+                {newsSearch && (
+                  <button
+                    onClick={() => setNewsSearch("")}
+                    className="bg-[#121212] border border-borderGray hover:border-gray-700 text-xs font-bold px-4 py-2 rounded-lg text-lightAccent transition-all mt-2"
+                  >
+                    Clear Search
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredNews.map((item, idx) => (
+                  <div
+                    key={item.id || idx}
+                    className="bg-darkCard border border-borderGray hover:border-gray-700 rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-300 group hover:shadow-xl hover:-translate-y-0.5"
+                  >
+                    <div className="space-y-4">
+                      {/* Image container */}
+                      <div className="aspect-video w-full overflow-hidden bg-[#181818] relative border-b border-borderGray">
+                        {item.image && item.image !== "None" ? (
+                          <img
+                            src={item.image}
+                            alt={item.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            loading="lazy"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = "none";
+                            }}
+                          />
+                        ) : null}
+                        {/* Fallback gradient banner if image is not present or fails to load */}
+                        <div className="absolute inset-0 bg-gradient-to-tr from-purple-950/20 to-indigo-950/20 flex items-center justify-center p-4">
+                          <Cpu size={24} className="text-gray-700 group-hover:text-lightAccent transition-colors duration-300" />
+                        </div>
+                        
+                        {/* Source domain tag overlay */}
+                        <div className="absolute bottom-3 left-3 bg-black/75 backdrop-blur-md border border-borderGray px-2 py-0.5 rounded text-[9px] font-bold text-gray-300">
+                          {item.source}
+                        </div>
+                      </div>
+
+                      {/* Content details */}
+                      <div className="px-5 space-y-2">
+                        {/* Date and Author */}
+                        <div className="flex items-center justify-between text-[10px] text-gray-500 font-bold">
+                          <span>{item.author && item.author !== "Unknown" ? `By ${item.author}` : "AI News Staff"}</span>
+                          <span>
+                            {item.published ? new Date(item.published).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" }) : ""}
+                          </span>
+                        </div>
+
+                        {/* Title */}
+                        <h3 className="font-extrabold text-sm leading-snug text-lightAccent group-hover:text-white transition-colors duration-200 line-clamp-2">
+                          {item.title}
+                        </h3>
+
+                        {/* Description */}
+                        <p className="text-xs text-textGray leading-relaxed line-clamp-3 font-medium">
+                          {item.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="px-5 pb-5 pt-4 border-t border-[#1c1c1c] mt-4 flex items-center justify-end">
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-lightAccent hover:underline group-hover:text-white transition-colors"
+                      >
+                        <span>Read Full Article</span>
+                        <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </main>
       ) : token ? (
         /* Standalone Remote Jobs Page View */
         <main className="max-w-[1480px] w-full mx-auto px-6 py-12 flex-1 flex flex-col gap-8">
@@ -1022,10 +1131,11 @@ export default function App() {
           </div>
 
           <div className="flex gap-6 font-semibold">
-            <a href="#articles" className="hover:text-lightAccent transition-colors">Articles</a>
-            <a href="#chatbots" className="hover:text-lightAccent transition-colors">Chatbots</a>
-            <a href="#live-feed" className="hover:text-lightAccent transition-colors">Live Feed</a>
-            <a href="#tech-stack" className="hover:text-lightAccent transition-colors">Stack</a>
+            <button onClick={() => setCurrentPage("resources")} className="hover:text-lightAccent transition-colors">Resources</button>
+            <a href="#chatbots" onClick={() => setCurrentPage("home")} className="hover:text-lightAccent transition-colors">Chatbots</a>
+            <button onClick={() => setCurrentPage("leaderboard")} className="hover:text-lightAccent transition-colors">Model Rankings</button>
+            <button onClick={() => setCurrentPage("news")} className="hover:text-lightAccent transition-colors">Live Feed</button>
+            <a href="#tech-stack" onClick={() => setCurrentPage("home")} className="hover:text-lightAccent transition-colors">Stack</a>
           </div>
         </div>
       </footer>
@@ -1040,56 +1150,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 6. Article Reader Modal */}
-      {selectedArticle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-[#121212] border border-borderGray rounded-2xl w-full max-w-[600px] p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto">
-            <button
-              onClick={() => setSelectedArticle(null)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-lightAccent transition-colors text-lg font-bold"
-            >
-              ✕
-            </button>
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="bg-lightAccent text-darkBg text-[10px] font-extrabold uppercase px-2 py-0.5 rounded">
-                  {selectedArticle.category}
-                </span>
-                <span className="text-xs text-gray-500">{selectedArticle.date}</span>
-              </div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-lightAccent leading-tight">
-                {selectedArticle.title}
-              </h2>
-              <div className="border-t border-borderGray pt-4 text-sm text-textGray leading-relaxed space-y-4">
-                {selectedArticle.content.split("\n\n").map((para, i) => (
-                  <p key={i}>{para}</p>
-                ))}
-              </div>
-              
-              {!token && (
-                <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-500/90 rounded-xl p-4 mt-6 text-xs flex flex-col gap-2">
-                  <div className="flex items-center gap-2 font-bold">
-                    <Lock size={14} />
-                    <span>Locked features details</span>
-                  </div>
-                  <p className="text-gray-400">
-                    Sign in to unlock interactive RAG citation links, automatic vector queries, and to discuss this update with the specialized bots!
-                  </p>
-                  <button
-                    onClick={() => {
-                      setSelectedArticle(null);
-                      setShowAuthModal(true);
-                    }}
-                    className="bg-lightAccent text-darkBg hover:bg-white text-xs font-extrabold py-2 px-4 rounded-lg w-fit mt-2 transition-colors active:scale-95"
-                  >
-                    Authenticate Now
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* 7. Job Detail Modal */}
       {selectedJob && (
